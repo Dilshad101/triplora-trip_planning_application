@@ -33,8 +33,7 @@ class Wanderlust extends StatelessWidget {
     );
 
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      // darkTheme: darkTheme,
+      debugShowCheckedModeBanner: true,
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: Provider.of<ThemeModel>(context).isDarkMode
