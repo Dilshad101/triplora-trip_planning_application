@@ -1,12 +1,14 @@
 // ignore_for_file: must_be_immutable, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Screens/widgets/custom_textfield.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
 
-import '../../Database/database_models.dart';
-import '../../style.dart';
-import '../widgets/custom_grid.dart';
+import '../../models/companion_model.dart';
+import '../../models/expense_model.dart';
+import '../../models/trip_model.dart';
+import '../../utils/styles/style.dart';
+import '../../widgets/custom_grid.dart';
+import '../../widgets/custom_textfield.dart';
 
 class SubScreenExpense extends StatefulWidget {
   SubScreenExpense({super.key, required this.trip, this.expense});
@@ -33,231 +35,222 @@ class _SubScreenExpenseState extends State<SubScreenExpense> {
       physics: const BouncingScrollPhysics(),
       shrinkWrap: true,
       children: [
-        const SizedBox(
-          height: 15,
-        ),
-        // Expenses
-        Container(
-          padding: const EdgeInsets.only(left: 20, top: 20, right: 20),
-          height: 150,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-            color: Theme.of(context).primaryColor,
-          ),
-          child: Column(
+        const SizedBox(height: 15),
+        totalExpenseTab(context),
+        expensePerPerson(context),
+        const SizedBox(height: 20),
+        expenseCatagory(),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
+  ValueListenableBuilder<List<Expenses>> expenseCatagory() {
+    return ValueListenableBuilder(
+      valueListenable: expenseNotifier,
+      builder: (context, value, child) {
+        final expense = expenseNotifier.value[0];
+        return GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1 / .6,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10),
+          children: [
+            customGrid(
+                amount: expense.food!,
+                amountColor: Theme.of(context).colorScheme.primary,
+                icon: Icons.restaurant_menu_rounded,
+                text: 'Food',
+                bgcolor: Colors.orange.shade100,
+                iconColor: Colors.orange),
+            customGrid(
+                text: 'Transport',
+                amountColor: Theme.of(context).colorScheme.primary,
+                amount: expense.transport!,
+                icon: Icons.directions,
+                bgcolor: Colors.blue.shade100,
+                iconColor: Colors.blue),
+            customGrid(
+                text: 'Hotel',
+                amountColor: Theme.of(context).colorScheme.primary,
+                amount: expense.hotel!,
+                icon: Icons.hotel_rounded,
+                bgcolor: Colors.purple.shade100,
+                iconColor: Colors.purple),
+            customGrid(
+                text: 'Other',
+                amountColor: Theme.of(context).colorScheme.primary,
+                amount: expense.other!,
+                icon: Icons.monetization_on,
+                bgcolor: Colors.green.shade100,
+                iconColor: Colors.green)
+          ],
+        );
+      },
+    );
+  }
+
+  Container expensePerPerson(BuildContext context) {
+    return Container(
+      constraints:
+          BoxConstraints.tight(Size(MediaQuery.sizeOf(context).width, 90)),
+      padding: const EdgeInsets.only(left: 15, right: 15),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(4), bottomRight: Radius.circular(4)),
+        color: Theme.of(context).primaryColor.withOpacity(.8),
+      ),
+      // Expense per person
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Expenses',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5),
-                      color: Colors.white,
-                    ),
-                    height: 40,
-                    width: 40,
-                    child: IconButton(
-                      icon: const Icon(Icons.add, color: mainColor),
-                      onPressed: () {
-                        addExpensesBottomSheet(context);
-                      },
-                    ),
-                  )
-                ],
-              ),
-              const SizedBox(
-                height: 0,
-              ),
-              ValueListenableBuilder(
-                valueListenable: totalExpenses,
-                builder: (context, value, child) => Text(
-                  '₹ $value',
-                  style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      overflow: TextOverflow.ellipsis),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Row(
-                children: [
-                  const Text(
-                    'Balance',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                  const SizedBox(
-                    width: 5,
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: balanceNotifire,
-                    builder: (context, value, child) => Text(
-                      '₹ $value',
+              Text('Total Companions',
+                  style: subTextStyle(color: Colors.white)),
+              FutureBuilder(
+                future:
+                    DatabaseHelper.instance.getAllCompanions(widget.trip.id!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                    return Text(
+                      '${snapshot.data!.length + 1}',
+                      style: subTextStyle(color: Colors.white, size: 20),
+                    );
+                  }
+                  return const Text('1',
                       style: TextStyle(
-                          fontSize: 16,
-                          color: value <= 0 ? Colors.red : Colors.white,
+                          fontSize: 20,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ),
-                ],
-              ),
+                          overflow: TextOverflow.ellipsis));
+                },
+              )
             ],
           ),
-        ),
-        // const SizedBox(height: 2),
-        Container(
-          constraints:
-              BoxConstraints.tight(Size(MediaQuery.sizeOf(context).width, 90)),
-          padding: const EdgeInsets.only(left: 15, right: 15),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(4)),
-            color: Theme.of(context).primaryColor.withOpacity(.8),
-          ),
-          // Expense per person
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Total Companions',
-                      style: subTextStyle(color: Colors.white)),
-                  FutureBuilder(
-                    future: DatabaseHelper.instance
-                        .getAllCompanions(widget.trip.id!),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else if (snapshot.hasData &&
-                          snapshot.data!.isNotEmpty) {
-                        return Text(
-                          '${snapshot.data!.length + 1}',
-                          style: subTextStyle(color: Colors.white, size: 20),
-                        );
-                      }
-                      return const Text('1',
-                          style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              overflow: TextOverflow.ellipsis));
-                    },
-                  )
-                ],
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Expense per Person',
-                      style: subTextStyle(color: Colors.white)),
-                  // Text('₹  400',
-                  //     style: subTextStyle(color: Colors.white, size: 20))
-                  FutureBuilder(
-                    future: getCompanion(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Container(
-                          height: 20,
-                          width: 20,
-                          color: Colors.amber,
-                        );
-                      } else if (snapshot.hasData && snapshot.data != null) {
-                        final expensePerPerson =
-                            calculateExpensePerPerson(snapshot.data ?? 1);
-                        return Text('₹ ${expensePerPerson.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                overflow: TextOverflow.ellipsis));
-                      }
-                      return Text(
-                        "₹ ${expenseNotifier.value[0].totalexpense}",
+              Text('Expense per Person',
+                  style: subTextStyle(color: Colors.white)),
+              // Text('₹  400',
+              //     style: subTextStyle(color: Colors.white, size: 20))
+              FutureBuilder(
+                future: getCompanion(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Container(
+                      height: 20,
+                      width: 20,
+                      color: Colors.amber,
+                    );
+                  } else if (snapshot.hasData && snapshot.data != null) {
+                    final expensePerPerson =
+                        calculateExpensePerPerson(snapshot.data ?? 1);
+                    return Text('₹ ${expensePerPerson.toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontSize: 20,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            overflow: TextOverflow.ellipsis),
-                      );
-                    },
-                  ),
-                ],
+                            overflow: TextOverflow.ellipsis));
+                  }
+                  return Text(
+                    "₹ ${expenseNotifier.value[0].totalexpense}",
+                    style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        overflow: TextOverflow.ellipsis),
+                  );
+                },
               ),
             ],
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        const SizedBox(
-          height: 20,
-        ),
-        // Seperate expense
-        ValueListenableBuilder(
-          valueListenable: expenseNotifier,
-          builder: (context, value, child) {
-            final expense = expenseNotifier.value[0];
-            return GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1 / .6,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10),
-              children: [
-                customGrid(
-                    amount: expense.food!,
-                    amountColor: Theme.of(context).colorScheme.primary,
-                    icon: Icons.restaurant_menu_rounded,
-                    text: 'Food',
-                    bgcolor: Colors.orange.shade100,
-                    iconColor: Colors.orange),
-                customGrid(
-                    text: 'Transport',
-                    amountColor: Theme.of(context).colorScheme.primary,
-                    amount: expense.transport!,
-                    icon: Icons.directions,
-                    bgcolor: Colors.blue.shade100,
-                    iconColor: Colors.blue),
-                customGrid(
-                    text: 'Hotel',
-                    amountColor: Theme.of(context).colorScheme.primary,
-                    amount: expense.hotel!,
-                    icon: Icons.hotel_rounded,
-                    bgcolor: Colors.purple.shade100,
-                    iconColor: Colors.purple),
-                customGrid(
-                    text: 'Other',
-                    amountColor: Theme.of(context).colorScheme.primary,
-                    amount: expense.other!,
-                    icon: Icons.monetization_on,
-                    bgcolor: Colors.green.shade100,
-                    iconColor: Colors.green)
-              ],
-            );
-          },
-        ),
-        const SizedBox(
-          height: 30,
-        ),
-      ],
+  Container totalExpenseTab(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(left: 20, top: 20, right: 20),
+      height: 150,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+        color: Theme.of(context).primaryColor,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Expenses',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: Colors.white,
+                ),
+                height: 40,
+                width: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.add, color: mainColor),
+                  onPressed: () => addExpensesBottomSheet(context),
+                ),
+              )
+            ],
+          ),
+          ValueListenableBuilder(
+            valueListenable: totalExpenses,
+            builder: (context, value, child) => Text(
+              '₹ $value',
+              style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text(
+                'Balance',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 5),
+              ValueListenableBuilder(
+                valueListenable: balanceNotifire,
+                builder: (context, value, child) => Text(
+                  '₹ $value',
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: value <= 0 ? Colors.red : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -268,6 +261,7 @@ class _SubScreenExpenseState extends State<SubScreenExpense> {
       context: ctx,
       builder: (context) {
         return Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height,
           ),

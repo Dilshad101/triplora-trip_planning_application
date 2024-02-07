@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:wanderlust_new/Themes/theme_model.dart';
+import 'package:wanderlust_new/utils/themes/theme_provider.dart';
 
-import 'Database/database_helper.dart';
-import 'Screens/splash_screen.dart';
-import 'Themes/dark_theme.dart';
-import 'Themes/light_theme.dart';
+import 'database/database_helper.dart';
+import 'screens/splash_screen.dart';
+import 'utils/themes/dark_theme.dart';
+import 'utils/themes/light_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,15 +14,15 @@ void main() async {
   await DatabaseHelper.instance.getalluser();
 
   runApp(
-    ChangeNotifierProvider<ThemeModel>(
-      create: (context) => ThemeModel(),
-      child: const Wanderlust(),
+    ChangeNotifierProvider<ThemeProvider>(
+      create: (context) => ThemeProvider(),
+      child: const TriploraApp(),
     ),
   );
 }
 
-class Wanderlust extends StatelessWidget {
-  const Wanderlust({super.key});
+class TriploraApp extends StatelessWidget {
+  const TriploraApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class Wanderlust extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: Provider.of<ThemeModel>(context).isDarkMode
+      themeMode: Provider.of<ThemeProvider>(context).isDarkMode
           ? ThemeMode.dark
           : ThemeMode.light,
       home: const ValidationSplashScreen(),

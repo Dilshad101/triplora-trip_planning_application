@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-//Colors
 const mainColor = Color(0xFF3C654D);
 const secondaryColor = Color(0xff888888);
 
@@ -11,7 +10,6 @@ TextStyle subTextStyle({Color? color, double? size, FontWeight? weight}) {
       fontWeight: weight ?? FontWeight.bold);
 }
 
-// Custom indicator
 class CircleIndicator extends Decoration {
   final Color color;
   final double radius;

@@ -5,16 +5,18 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttercontactpicker/fluttercontactpicker.dart';
 import 'package:intl/intl.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Database/database_models.dart';
-import 'package:wanderlust_new/Functionality/image_picker_function.dart';
-import 'package:wanderlust_new/Screens/parent_screen.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
+import 'package:wanderlust_new/screens/parent_screen.dart';
 
-import 'package:wanderlust_new/Screens/widgets/custom_textfield.dart';
-import 'package:wanderlust_new/style.dart';
-
-import '../messages/flush_bar.dart';
-import '../messages/popup.dart';
+import '../models/companion_model.dart';
+import '../models/expense_model.dart';
+import '../models/trip_model.dart';
+import '../models/user_model.dart';
+import '../utils/functions/image_picker_function.dart';
+import '../utils/messages/flush_bar.dart';
+import '../utils/messages/popup.dart';
+import '../utils/styles/style.dart';
+import '../widgets/custom_textfield.dart';
 
 //global icon list
 List<IconData> icons = [
@@ -59,6 +61,8 @@ class _MyAddTripState extends State<MyAddTrip> {
 
   final GlobalKey<FormState> _formkey = GlobalKey<FormState>();
 
+  final db = DatabaseHelper.instance;
+
   DateTime startingDate = DateTime.now();
   DateTime endingDate = DateTime.now().add(const Duration(days: 1));
 
@@ -79,369 +83,325 @@ class _MyAddTripState extends State<MyAddTrip> {
   void initState() {
     super.initState();
     if (widget.isEdit) {
-      destinationController.text = widget.trip!.destination;
-      startDateController.text = widget.trip!.startingDate;
-      endDateController.text = widget.trip!.endingDate;
-      selectedChoice = widget.trip!.transport;
-      budgetController.text = widget.trip!.budget.toString();
-      purposeValue = widget.trip!.purpose;
-      if (widget.trip?.fileImage != null) {
-        fileImage = File(widget.trip!.fileImage!);
-      } else {
-        assetImage = imageList[widget.trip!.assetImgIdx!];
-        assetImgIdx = widget.trip!.assetImgIdx;
-      }
-      //
-      getStoredCompanions().then((compList) {
-        tempCompanions = compList
-            .map((companion) => PhoneContact(
-                companion.companion, PhoneNumber(companion.phonenumber, '')))
-            .toList();
-      });
+      setDataOnEdit();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: widget.isEdit == false
-            ? Text('New Trip',
-                style: subTextStyle(
-                    size: 25, weight: FontWeight.w500, color: secondaryColor))
-            : Text('Edit Trip',
-                style: subTextStyle(
-                    size: 25, weight: FontWeight.w500, color: secondaryColor)),
-        backgroundColor: Theme.of(context).colorScheme.background,
-        elevation: 0,
-        leading: widget.isEdit
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded,
-                    color: mainColor, size: 26),
-                onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              ScreenMain(loggedUser: widget.loggedUser)),
-                      (route) => false);
-                })
-            : null,
-      ),
+      appBar: appBar(context),
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Form(
-          key: _formkey,
-          child: ListView(
-            physics: const BouncingScrollPhysics(),
-            children: [
-              const SizedBox(
-                height: 10,
-              ),
-              InkWell(
-                onTap: () {
-                  showImageOption();
-                  // addTripimage();
-                },
-                child: DottedBorder(
-                  borderType: BorderType.RRect,
-                  color: Theme.of(context).colorScheme.onBackground,
-                  strokeWidth: 1,
-                  dashPattern: assetImage == null
-                      ? fileImage == null
-                          ? const [38, 10]
-                          : const [0, 1]
-                      : const [0, 1],
-                  child: SizedBox(
-                    height: 200,
-                    width: double.maxFinite,
-                    child: assetImage == null
-                        ? fileImage == null
-                            ? const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.upload_file_outlined,
-                                    size: 30,
-                                  ),
-                                  SizedBox(
-                                    height: 20,
-                                  ),
-                                  Text(
-                                    'Choose a CoverPhoto',
-                                  ),
-                                  Text('or'),
-                                  Text('Select Your own'),
-                                ],
-                              )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Image(
-                                  image: FileImage(
-                                    File(
-                                      fileImage!.path,
-                                    ),
-                                  ),
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image(
-                              image: AssetImage(assetImage!),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              CustomTextField(
+      body: Form(
+        key: _formkey,
+        child: ListView(
+          padding: const EdgeInsets.all(15),
+          physics: const BouncingScrollPhysics(),
+          children: [
+            const SizedBox(height: 10),
+            coverPhoto(context),
+            const SizedBox(height: 20),
+            CustomTextField(
+              validator: (value) =>
+                  value == null || destinationController.text.trim().isEmpty
+                      ? 'Choose your Destination'
+                      : null,
+              label: 'Your Destination',
+              controller: destinationController,
+            ),
+            const SizedBox(height: 20),
+            CustomTextField(
+              controller: startDateController,
+              isreadOnly: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Select Starting Date';
+                } else if (!db.isStartDateAvailable) {
+                  return 'You have already scheduled a trip on this day.';
+                } else if (!db.isTripAvailable) {
+                  return '';
+                }
+                return null;
+              },
+              onTap: () => _showCalender(startingDate, startDateController),
+              label: 'Choose starting date',
+              prefix: true,
+              icon: Icons.calendar_today_outlined,
+            ),
+            const SizedBox(height: 20),
+            CustomTextField(
+              controller: endDateController,
+              isreadOnly: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Select Ending Date';
+                } else if (!isDateValid()) {
+                  return 'End Date should be after the Starting Date';
+                } else if (!db.isEndDateAvailable) {
+                  return 'You have already scheduled a trip on this day.';
+                } else if (!db.isTripAvailable) {
+                  return 'There is already a trip on this date range';
+                }
+                return null;
+              },
+              onTap: () {
+                _showCalender(endingDate, endDateController);
+              },
+              label: 'Choose Ending date',
+              prefix: true,
+              icon: Icons.calendar_today_outlined,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Choose your transport',
+              style: TextStyle(color: error == true ? Colors.red : Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            choiceChipBuilder(),
+            Divider(
+              thickness: 1,
+              color: error == true ? Colors.red : Colors.grey.shade500,
+            ),
+            const SizedBox(height: 10),
+            CustomTextField(
+                controller: budgetController,
                 validator: (value) {
-                  if (value == null ||
-                      destinationController.text.trim().isEmpty) {
-                    return 'Choose your Destination';
+                  if (value == null || budgetController.text.trim().isEmpty) {
+                    return 'Please Enter your Budget';
+                  } else if (value.contains(RegExp(r'[a-z]'))) {
+                    return 'only Numbers allowed';
                   }
                   return null;
                 },
-                label: 'Your Destination',
-                controller: destinationController,
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              CustomTextField(
-                controller: startDateController,
-                isreadOnly: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Select Starting Date';
-                  } else if (!DatabaseHelper.instance.isStartDateAvailable) {
-                    return 'You have already scheduled a trip on this day.';
-                  } else if (!DatabaseHelper.instance.isTripAvailable) {
-                    return '';
-                  }
-                  return null;
-                },
-                onTap: () {
-                  _showCalender(startingDate, startDateController);
-                },
-                label: 'Choose starting date',
-                prefix: true,
-                icon: Icons.calendar_today_outlined,
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              CustomTextField(
-                  controller: endDateController,
-                  isreadOnly: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Select Ending Date';
-                    } else if (!isDateValid()) {
-                      return 'End Date should be after the Starting Date';
-                    } else if (!DatabaseHelper.instance.isEndDateAvailable) {
-                      return 'You have already scheduled a trip on this day.';
-                    } else if (!DatabaseHelper.instance.isTripAvailable) {
-                      return 'There is already a trip on this date range';
-                    }
-                    return null;
-                  },
-                  onTap: () {
-                    _showCalender(endingDate, endDateController);
-                  },
-                  label: 'Choose Ending date',
-                  prefix: true,
-                  icon: Icons.calendar_today_outlined),
-              const SizedBox(
-                height: 20,
-              ),
-              Text('Choose your transport',
-                  style: TextStyle(
-                      color: error == true ? Colors.red : Colors.grey)),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 150,
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: choice.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, childAspectRatio: 1 / .6),
-                  itemBuilder: (context, index) {
-                    return ChoiceChip(
-                      selectedColor: const Color(0xFF3C654D),
-                      shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(4))),
-                      label: SizedBox(
-                          height: 45,
-                          width: 80,
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                Icon(
-                                  icons[index],
-                                  color: selectedChoice == index
-                                      ? Colors.white
-                                      : Theme.of(context).colorScheme.primary,
-                                ),
-                                Text(
-                                  choice[index],
-                                  style: TextStyle(
-                                    color: selectedChoice == index
-                                        ? Colors.white
-                                        : Theme.of(context).colorScheme.primary,
-                                  ),
-                                )
-                              ])),
-                      selected: selectedChoice == index,
-                      onSelected: (isSelected) {
-                        setState(() {
-                          selectedChoice = isSelected ? index : -1;
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-              Divider(
-                thickness: 1,
-                color: error == true ? Colors.red : Colors.grey.shade500,
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              CustomTextField(
-                  controller: budgetController,
-                  validator: (value) {
-                    if (value == null || budgetController.text.trim().isEmpty) {
-                      return 'Please Enter your Budget';
-                    } else if (value.contains(RegExp(r'[a-z]'))) {
-                      return 'only Numbers allowed';
-                    }
-                    return null;
-                  },
-                  label: 'Enter Your Budget',
-                  inputType: TextInputType.number),
-              const SizedBox(height: 20),
-              // Dropdown Button
-              Container(
-                // color: secondaryColor,
-                padding: const EdgeInsets.only(left: 10),
-                height: 54,
-                width: double.maxFinite,
-                decoration: BoxDecoration(
-                    border: Border.all(width: 1, color: secondaryColor),
-                    borderRadius: BorderRadius.circular(4)),
-                child: DropdownButton(
-                  icon: const Padding(
-                      padding: EdgeInsets.only(right: 10),
-                      child: Icon(Icons.keyboard_arrow_down_rounded, size: 28)),
-                  iconEnabledColor: secondaryColor,
-                  isExpanded: true,
-                  underline: Container(),
-                  value: purposeValue,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      purposeValue = newValue!;
-                    });
-                  },
-                  items: <String>[
-                    'Business',
-                    'Entertainment',
-                    'Family',
-                    'Other'
-                  ].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: const TextStyle(color: secondaryColor),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        showCompanions(context);
-                      },
-                      style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.all(Colors.black87),
-                          fixedSize: MaterialStateProperty.all(
-                              const Size.fromHeight(54))),
-                      child: Text(
-                        'Show companions',
-                        style: TextStyle(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 8,
-                  ),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        selectCompanion();
-                      },
-                      style: ButtonStyle(
-                          fixedSize:
-                              MaterialStateProperty.all(const Size(100, 54))),
-                      // child: Icon(Icons.)
-                      child: const Text(
-                        'Add Companions',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              ElevatedButton(
-                  style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all(Colors.grey.shade700),
-                      fixedSize: MaterialStateProperty.all(
-                          const Size(double.maxFinite, 55))),
-                  onPressed: () async {
-                    if (await onAddButtonClicked()) {
-                      customToast(
-                          bgcolor: Colors.green,
-                          msg: widget.isEdit
-                              ? 'Trip Updated Successfully'
-                              : 'Trip Added Successfully');
-                    }
-                  },
-                  child: widget.isEdit == true
-                      ? Text('Done',
-                          style: subTextStyle(
-                              color: Colors.white,
-                              size: 16,
-                              weight: FontWeight.w500))
-                      : Text('Finish',
-                          style: subTextStyle(
-                            size: 16,
-                            color: Colors.white,
-                            weight: FontWeight.w500,
-                          ))),
-              const SizedBox(
-                height: 100,
-              ),
-            ],
+                label: 'Enter Your Budget',
+                inputType: TextInputType.number),
+            const SizedBox(height: 20),
+            dropDownButton(),
+            const SizedBox(height: 20),
+            companionButton(context),
+            const SizedBox(height: 20),
+            doneButton(),
+            const SizedBox(
+              height: 100,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  AppBar appBar(BuildContext context) {
+    return AppBar(
+      centerTitle: true,
+      title: widget.isEdit == false
+          ? Text('New Trip',
+              style: subTextStyle(
+                  size: 25, weight: FontWeight.w500, color: secondaryColor))
+          : Text('Edit Trip',
+              style: subTextStyle(
+                  size: 25, weight: FontWeight.w500, color: secondaryColor)),
+      backgroundColor: Theme.of(context).colorScheme.background,
+      elevation: 0,
+      leading: widget.isEdit
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_rounded,
+                  color: mainColor, size: 26),
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            ScreenMain(loggedUser: widget.loggedUser)),
+                    (route) => false);
+              })
+          : null,
+    );
+  }
+
+  ElevatedButton doneButton() {
+    return ElevatedButton(
+      style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.all(Colors.grey.shade700),
+          fixedSize:
+              MaterialStateProperty.all(const Size(double.maxFinite, 55))),
+      onPressed: () async {
+        if (await onAddButtonClicked()) {
+          customToast(
+              bgcolor: Colors.green,
+              msg: widget.isEdit
+                  ? 'Trip Updated Successfully'
+                  : 'Trip Added Successfully');
+        }
+      },
+      child: widget.isEdit == true
+          ? Text('Done',
+              style: subTextStyle(
+                  color: Colors.white, size: 16, weight: FontWeight.w500))
+          : Text('Finish',
+              style: subTextStyle(
+                size: 16,
+                color: Colors.white,
+                weight: FontWeight.w500,
+              )),
+    );
+  }
+
+  Row companionButton(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: ElevatedButton(
+            onPressed: () {
+              showCompanions(context);
+            },
+            style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all(Colors.black87),
+                fixedSize:
+                    MaterialStateProperty.all(const Size.fromHeight(54))),
+            child: Text(
+              'Show companions',
+              style: TextStyle(color: Colors.grey.shade300),
+            ),
           ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => selectCompanion(),
+            style: ButtonStyle(
+              fixedSize: MaterialStateProperty.all(const Size(100, 54)),
+              padding: MaterialStateProperty.all(EdgeInsets.zero),
+            ),
+            child: const Text(
+              'Add Companions',
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11),
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  Container dropDownButton() {
+    return Container(
+      padding: const EdgeInsets.only(left: 10),
+      height: 54,
+      width: double.maxFinite,
+      decoration: BoxDecoration(
+          border: Border.all(width: 1, color: secondaryColor),
+          borderRadius: BorderRadius.circular(4)),
+      child: DropdownButton(
+        icon: const Padding(
+            padding: EdgeInsets.only(right: 10),
+            child: Icon(Icons.keyboard_arrow_down_rounded, size: 28)),
+        iconEnabledColor: secondaryColor,
+        isExpanded: true,
+        underline: Container(),
+        value: purposeValue,
+        onChanged: (String? newValue) {
+          setState(() {
+            purposeValue = newValue!;
+          });
+        },
+        items: <String>['Business', 'Entertainment', 'Family', 'Other']
+            .map((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(
+              value,
+              style: const TextStyle(color: secondaryColor),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  SizedBox choiceChipBuilder() {
+    return SizedBox(
+      height: 150,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: choice.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, childAspectRatio: 1 / .6),
+        itemBuilder: (context, index) {
+          return ChoiceChip(
+            selectedColor: const Color(0xFF3C654D),
+            showCheckmark: false,
+            shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(4))),
+            label: SizedBox(
+                height: 45,
+                width: 80,
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Icon(
+                        icons[index],
+                        color: selectedChoice == index
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                      Text(
+                        choice[index],
+                        style: TextStyle(
+                          color: selectedChoice == index
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                      )
+                    ])),
+            selected: selectedChoice == index,
+            onSelected: (isSelected) =>
+                setState(() => selectedChoice = isSelected ? index : -1),
+          );
+        },
+      ),
+    );
+  }
+
+  InkWell coverPhoto(BuildContext context) {
+    return InkWell(
+      onTap: () => showImageOption(),
+      child: DottedBorder(
+        borderType: BorderType.RRect,
+        color: Theme.of(context).colorScheme.onBackground,
+        strokeWidth: 1,
+        dashPattern: assetImage == null
+            ? fileImage == null
+                ? const [38, 10]
+                : const [0, 1]
+            : const [0, 1],
+        child: SizedBox(
+          height: 200,
+          width: double.maxFinite,
+          child: assetImage == null
+              ? fileImage == null
+                  ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.upload_file_outlined, size: 30),
+                        SizedBox(height: 20),
+                        Text('Choose a CoverPhoto'),
+                        Text('or'),
+                        Text('Select Your own'),
+                      ],
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image(
+                        image: FileImage(File(fileImage!.path)),
+                        fit: BoxFit.cover,
+                      ),
+                    )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child:
+                      Image(image: AssetImage(assetImage!), fit: BoxFit.cover),
+                ),
         ),
       ),
     );
@@ -449,6 +409,7 @@ class _MyAddTripState extends State<MyAddTrip> {
 
   showCompanions(BuildContext ctx) {
     showModalBottomSheet(
+      backgroundColor: Theme.of(context).colorScheme.onPrimary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       context: context,
       builder: (context) {
@@ -473,10 +434,10 @@ class _MyAddTripState extends State<MyAddTrip> {
                   Expanded(
                     child: tempCompanions.isEmpty
                         ? const Center(
-                            child: Text('No companions added',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                )),
+                            child: Text(
+                              'No companions added',
+                              style: TextStyle(fontSize: 15),
+                            ),
                           )
                         : ListView.builder(
                             physics: const BouncingScrollPhysics(),
@@ -509,9 +470,10 @@ class _MyAddTripState extends State<MyAddTrip> {
                                         optionOne: 'Remove',
                                         optionTwo: 'cancel',
                                         onProceed: () {
-                                          refresh(() {
-                                            tempCompanions.removeAt(index);
-                                          });
+                                          refresh(
+                                            () =>
+                                                tempCompanions.removeAt(index),
+                                          );
 
                                           Navigator.of(context).pop();
                                         },
@@ -542,20 +504,20 @@ class _MyAddTripState extends State<MyAddTrip> {
   Future<bool> onAddButtonClicked() async {
     // checking if the start date is available //
 
-    await DatabaseHelper.instance.isDateAvailable(
+    await db.isDateAvailable(
         dateToCheck: startDateController.text,
         isStart: true,
         editTripId: widget.trip?.id,
         userId: widget.loggedUser.id!);
 
-    await DatabaseHelper.instance.isDateAvailable(
+    await db.isDateAvailable(
         dateToCheck: endDateController.text,
         isStart: false,
         editTripId: widget.trip?.id,
         userId: widget.loggedUser.id!);
 
-    await DatabaseHelper.instance.tripAvailable(startDateController.text,
-        endDateController.text, widget.loggedUser.id!, widget.trip?.id);
+    await db.tripAvailable(startDateController.text, endDateController.text,
+        widget.loggedUser.id!, widget.trip?.id);
 
     if (fileImage == null && assetImage == null) {
       customToast(msg: 'Select a cover photo', bgcolor: Colors.red);
@@ -571,29 +533,24 @@ class _MyAddTripState extends State<MyAddTrip> {
     setState(() {
       error = false;
     });
+
+    
     if (_formkey.currentState!.validate()) {
-      final destination = destinationController.text;
-      final startDate = startDateController.text;
-      final endDate = endDateController.text;
-      final fileImagepath = fileImage?.path;
-      final assetImgIndex = assetImgIdx;
-      final transport = selectedChoice;
       int? budget = int.tryParse(budgetController.text);
-      final purpose = purposeValue;
-      final companions = tempCompanions;
       final trip = Trips(
-          userId: widget.loggedUser.id!,
-          destination: destination,
-          startingDate: startDate,
-          endingDate: endDate,
-          transport: transport,
-          purpose: purpose,
-          budget: budget ?? 0,
-          fileImage: fileImagepath,
-          assetImgIdx: assetImgIndex,
-          companions: companions);
+        userId: widget.loggedUser.id!,
+        destination: destinationController.text,
+        startingDate: startDateController.text,
+        endingDate: endDateController.text,
+        transport: selectedChoice,
+        purpose: purposeValue,
+        budget: budget ?? 0,
+        fileImage: fileImage?.path,
+        assetImgIdx: assetImgIdx,
+        companions: tempCompanions,
+      );
       if (!widget.isEdit) {
-        DatabaseHelper.instance.addTrip(trip);
+        db.addTrip(trip);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
               builder: (context) => ScreenMain(loggedUser: widget.loggedUser)),
@@ -602,7 +559,7 @@ class _MyAddTripState extends State<MyAddTrip> {
         return true;
       } else {
         trip.id = widget.trip!.id;
-        DatabaseHelper.instance.updateTrip(trip);
+        db.updateTrip(trip);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
               builder: (context) => ScreenMain(loggedUser: widget.loggedUser)),
@@ -653,18 +610,18 @@ class _MyAddTripState extends State<MyAddTrip> {
 
 //to retreive the companions in the trip in edit//
   Future<List<Companions>> getStoredCompanions() async {
-    final compList =
-        await DatabaseHelper.instance.getAllCompanions(widget.trip!.id!);
+    final compList = await db.getAllCompanions(widget.trip!.id!);
     return compList;
   }
 
 // add Image bottomsheet //
   showImageOption() {
     return showModalBottomSheet(
+      backgroundColor: Theme.of(context).colorScheme.background,
       context: context,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           height: 350,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -809,8 +766,8 @@ class _MyAddTripState extends State<MyAddTrip> {
     Navigator.of(context).pop();
   }
 
-  _showCalender(DateTime pickeDate, TextEditingController controller) async {
-    await showDatePicker(
+  _showCalender(DateTime pickeDate, TextEditingController controller) {
+    showDatePicker(
             context: context,
             initialDate: DateTime.now(),
             firstDate: DateTime.now(),
@@ -822,6 +779,27 @@ class _MyAddTripState extends State<MyAddTrip> {
         }
         controller.text = DateFormat('yyyy-MM-dd').format(value);
       });
+    });
+  }
+
+  setDataOnEdit() {
+    destinationController.text = widget.trip!.destination;
+    startDateController.text = widget.trip!.startingDate;
+    endDateController.text = widget.trip!.endingDate;
+    selectedChoice = widget.trip!.transport;
+    budgetController.text = widget.trip!.budget.toString();
+    purposeValue = widget.trip!.purpose;
+    if (widget.trip?.fileImage != null) {
+      fileImage = File(widget.trip!.fileImage!);
+    } else {
+      assetImage = imageList[widget.trip!.assetImgIdx!];
+      assetImgIdx = widget.trip!.assetImgIdx;
+    }
+    getStoredCompanions().then((compList) {
+      tempCompanions = compList
+          .map((companion) => PhoneContact(
+              companion.companion, PhoneNumber(companion.phonenumber, '')))
+          .toList();
     });
   }
 }

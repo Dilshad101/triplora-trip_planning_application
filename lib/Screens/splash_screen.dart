@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Database/database_models.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
 
+import '../models/user_model.dart';
 import 'parent_screen.dart';
 import 'welcom_screen.dart';
 
@@ -29,7 +29,7 @@ class _ValidationSplashScreenState extends State<ValidationSplashScreen> {
       backgroundColor: const Color(0xFF3C654D),
       body: Center(
         child: SvgPicture.asset(
-          'svg_logo/wanderlust-logo.svg',
+          'svg_logo/triplora-logo.svg',
           height: 100,
           colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
         ),

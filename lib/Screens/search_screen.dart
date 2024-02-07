@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Database/database_models.dart';
-import 'package:wanderlust_new/Screens/add_trip_screen.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
+import 'package:wanderlust_new/screens/add_trip_screen.dart';
 
-import 'trip_details_screen.dart';
+import '../models/trip_model.dart';
+import '../models/user_model.dart';
+import 'subscreen_trip_details/trip_details_screen.dart';
 
 class ScreenSearch extends StatefulWidget {
   const ScreenSearch({super.key, required this.loggeduser});

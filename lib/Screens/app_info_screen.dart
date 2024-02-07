@@ -4,13 +4,13 @@ class ScreenAppInfo extends StatelessWidget {
   const ScreenAppInfo({super.key});
 
   final String description =
-      'Traveler is your ultimate travel companion that lets you plan and organize your trips with ease. Whether you\'re a solo adventurer or traveling with friends and family, Traveler helps you create memorable journeys and keeps your travel budget on track.';
+      'Triplora is your ultimate travel companion that lets you plan and organize your trips with ease. Whether you\'re a solo adventurer or traveling with friends and family, Triplora helps you create memorable journeys and keeps your travel budget on track.';
   final String privacy =
       'Your privacy is our priority. Refer to our privacy policy to understand how we safeguard your personal information.';
   final String features1 =
       'Trip Planning Made Easy: Seamlessly plan your trips by adding destinations, start and end dates, and purposes for each adventure.';
   final String features2 =
-      'Budget Management: Set your trip budget and track expenses effortlessly. Traveler ensures you stay within your budget while making the most of your experiences.';
+      'Budget Management: Set your trip budget and track expenses effortlessly. Triplora ensures you stay within your budget while making the most of your experiences.';
   final String features3 =
       'Expense Tracker: Log all your expenses during the trip, including food, transportation, accommodation, and more. Keep a detailed record of your spending.';
   final String features4 =
@@ -52,17 +52,19 @@ class ScreenAppInfo extends StatelessWidget {
         padding: const EdgeInsets.only(left: 20, right: 20, top: 30),
         children: [
           customColumn(
-              title: 'App Name', subtitle: ' Traveler', context: context),
+              title: 'App Name', subtitle: ' Triplora', context: context),
           customColumn(
               title: 'Description', subtitle: description, context: context),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Key features',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500)),
+              Text(
+                'Key features',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 15),
               features(features: features2),
               const SizedBox(height: 10),
@@ -104,7 +106,7 @@ class ScreenAppInfo extends StatelessWidget {
               color: Colors.grey.shade600,
               fontWeight: FontWeight.w500,
               overflow: TextOverflow.clip),
-              textAlign: TextAlign.left,
+          textAlign: TextAlign.left,
         ))
       ],
     );

@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:fluttercontactpicker/fluttercontactpicker.dart';
 import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
-import 'database_models.dart';
+import '../models/companion_model.dart';
+import '../models/expense_model.dart';
+import '../models/trip_model.dart';
+import '../models/user_model.dart';
 
 ValueNotifier<int> totalExpenses = ValueNotifier(0);
 ValueNotifier<int> balanceNotifire = ValueNotifier(0);
@@ -43,6 +46,8 @@ class DatabaseHelper {
   }
 
   static final DatabaseHelper instance = DatabaseHelper._();
+
+/////////////////// Creating Tables/////////////////
 
   initDb() async {
     return await openDatabase(
@@ -98,9 +103,10 @@ class DatabaseHelper {
     );
   }
 
-  ///////////////////////////////////////////////* tripDatabase Oprations*//////////////////////////////////////////
+  //////////////////////////* tripDatabase Oprations*/////////////////////////
 
-  //////////// adding trips to database///////////
+  ///////// adding trips to database/////////
+
   addTrip(Trips trip) async {
     int tripId = await _database!.rawInsert(
       '''INSERT INTO $_tripTable  
@@ -118,19 +124,23 @@ class DatabaseHelper {
         trip.assetImgIdx
       ],
     );
+
     ////////////// adding companions ///////////////
+
     if (trip.companions != null) {
       addCompanion(trip.companions!, tripId);
     }
-    // adding expenses
+    //// adding expenses ////
+
     final expense = Expenses(
-        balance: trip.budget,
-        food: 0,
-        transport: 0,
-        hotel: 0,
-        other: 0,
-        tripId: tripId,
-        totalexpense: 0);
+      balance: trip.budget,
+      food: 0,
+      transport: 0,
+      hotel: 0,
+      other: 0,
+      tripId: tripId,
+      totalexpense: 0,
+    );
     initExpense(expense);
   }
   //////////// geting the uncompleted trips ///////////////
@@ -161,7 +171,7 @@ class DatabaseHelper {
     return tripList;
   }
 
-  ////////////  Geting the completed Trips  /////////////////
+  ////////////////  Geting the completed Trips  /////////////////
 
   Future<List<Trips>> getCompletedTrips(int userId) async {
     final currentDate = DateTime.now();
@@ -186,13 +196,12 @@ class DatabaseHelper {
     return tripList;
   }
 
-////////  Geting ongoing Trip////////
+////////////////  Geting ongoing Trip/////////////
 
   Future<List<Trips>> getCurrentTrip(int userId) async {
     List<Trips> trips = [];
     final currentDate = DateTime.now();
     final formatedDate = DateFormat('yyyy-MM-dd').format(currentDate);
-    //  currentDate.toIso8601String();
     final List<Map<String, dynamic>> mapList = await _database!.query(
         _tripTable,
         where: 'startDate <= ? AND endDate >= ? AND userId=?',
@@ -215,7 +224,8 @@ class DatabaseHelper {
     return trips;
   }
 
-///////// geting all the Trips  /////////////
+////////////////// geting all the Trips  /////////////////
+
   Future<List<Trips>> getUserTrips(int userId) async {
     List<Map<String, dynamic>> mapList = await _database!.query(_tripTable,
         where: 'userId = ?', whereArgs: [userId], orderBy: 'startDate ASC');
@@ -237,7 +247,7 @@ class DatabaseHelper {
     return tripList;
   }
 
-  //////////// Date validation //////////////
+  ///////////////// Date validation ////////////////////
 
   isDateAvailable(
       {required String dateToCheck,
@@ -284,7 +294,7 @@ class DatabaseHelper {
         : isEndDateAvailable = dateAvailable;
   }
 
-// checking is there any other trip on the inputed date range//
+/////////// checking is there any other trip on the inputed date range //////////
   tripAvailable(String start, String end, int userId, int? tripId) async {
     if (start.isEmpty || end.isEmpty) return;
     final trips = await DatabaseHelper.instance.getUserTrips(userId);
@@ -331,10 +341,6 @@ class DatabaseHelper {
         date1.day == date2.day;
   }
 
-  // isDateAvilable({required isStart}) {
-  //   return isStart ? startDateAvailable : endDateAvailable;
-  // }
-
 //////////////// Getting a single trip ///////////////////
   Future<Trips> getATrip(int id) async {
     List<Map<String, dynamic>> mapList =
@@ -371,13 +377,13 @@ class DatabaseHelper {
     await _database!
         .update(_tripTable, row, where: 'id = ?', whereArgs: [trip.id]);
 
-    //updating companions in case of new companion or deleting companion
+    ////updating companions in case of new companion or deleting companion/////
     await _database!
         .delete(_companionTable, where: 'tripId = ?', whereArgs: [trip.id]);
     if (trip.companions != null) {
       addCompanion(trip.companions!, trip.id!);
     }
-    // updating expenses incase of budget change
+    ////////// updating expenses incase of budget change////////
     final expList = await getExpense(trip.id!);
     final exp = expList[0];
     final expense = Expenses(
@@ -410,7 +416,7 @@ class DatabaseHelper {
 
   ///////////////////////////////////* Image Database Functions*////////////////////////////////////////////
 
-  //////////////add Images to Database////////////
+//////////////add Images to Database////////////
 
   addTripImages({required String imagePath, required int tripId}) async {
     await _database!.rawInsert(
@@ -430,9 +436,7 @@ class DatabaseHelper {
   }
 
   //////////////////////////////* Expense Database Functions*////////////////////////////////////////////////
-  ///
-  ///
-  ///
+
   //////////// to Store the expense in first time adding //////////
   initExpense(Expenses expense) async {
     await _database!.rawInsert(
@@ -550,9 +554,6 @@ class DatabaseHelper {
   }
 
 ////////////////////////////////* *user database functions*/////////////////////////////////////////////
-  ///
-  ///
-  ///
 
 ///////////// add a user to database //////////////
   Future<void> adduser(UserModelClass user) async {

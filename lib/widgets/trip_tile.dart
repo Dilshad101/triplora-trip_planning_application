@@ -1,84 +1,25 @@
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
-
-import '../../database/database_helper.dart';
-import '../../models/user_model.dart';
-import '../../widgets/trip_tile.dart';
-import '../add_trip_screen.dart';
-import '../subscreen_trip_details/trip_details_screen.dart';
 import 'package:wanderlust_new/models/trip_model.dart';
 
-class SubScreenAllTrips extends StatefulWidget {
-  const SubScreenAllTrips({super.key, required this.loggeduser});
-  final UserModelClass loggeduser;
+import '../models/user_model.dart';
+import '../screens/add_trip_screen.dart';
+import '../screens/subscreen_trip_details/trip_details_screen.dart';
 
-  @override
-  State<SubScreenAllTrips> createState() => _SubScreenAllTripsState();
-}
+class TripTile extends StatelessWidget {
+  const TripTile({
+    super.key,
+    required this.user,
+    required this.trip,
+  });
 
-class _SubScreenAllTripsState extends State<SubScreenAllTrips> {
+  final Trips trip;
+  final UserModelClass user;
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: DatabaseHelper.instance.getUserTrips(widget.loggeduser.id!),
-      builder: (context, snapshot) {
-        if (snapshot.hasError || !snapshot.hasData) {
-          return Text('Error ${snapshot.error}');
-        } else if (!snapshot.hasData ||
-            snapshot.data == null ||
-            snapshot.data!.isEmpty) {
-          return Center(
-              child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 200,
-                width: 200,
-                child: Lottie.asset('assets/hero animation.json'),
-              ),
-              const SizedBox(height: 30),
-              Text(
-                'No Trips ..?  Plan a new journey',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontSize: 20),
-              ),
-              const SizedBox(height: 70)
-            ],
-          ));
-        }
-        final tripList = snapshot.data;
-
-        return ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(left: 20, right: 20),
-          children: [
-            const SizedBox(height: 40),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1 / 1.3,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-              ),
-              itemCount: tripList!.length,
-              itemBuilder: (context, index) {
-                final trip = tripList[index];
-                return TripTile(trip: trip, user: widget.loggeduser);
-              },
-            ),
-            const SizedBox(height: 270)
-          ],
-        );
-      },
-    );
-  }
-
-  InkWell allTripTile(BuildContext context, Trips trip) {
     return InkWell(
       child: Container(
         decoration: BoxDecoration(
@@ -185,7 +126,7 @@ class _SubScreenAllTripsState extends State<SubScreenAllTrips> {
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
             builder: (context) => ScreenTripDetails(
-                  loggedUser: widget.loggeduser,
+                  loggedUser: user,
                   trip: trip,
                 )));
       },

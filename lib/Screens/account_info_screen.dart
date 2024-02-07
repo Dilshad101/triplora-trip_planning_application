@@ -1,24 +1,22 @@
-// ignore_for_file: must_be_immutable, use_build_context_synchronously
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Functionality/camara_bottomsheet.dart';
-import 'package:wanderlust_new/Functionality/image_picker_function.dart';
-import 'package:wanderlust_new/Screens/parent_screen.dart';
-import 'package:wanderlust_new/Screens/signup_screen.dart';
-import 'package:wanderlust_new/Screens/widgets/custom_listtile.dart';
-import 'package:wanderlust_new/Screens/widgets/custom_textfield.dart';
-import 'package:wanderlust_new/messages/flush_bar.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
+import 'package:wanderlust_new/screens/parent_screen.dart';
+import 'package:wanderlust_new/screens/signup_screen.dart';
 
-import '../Database/database_models.dart';
+import '../models/user_model.dart';
+import '../utils/functions/camara_bottomsheet.dart';
+import '../utils/functions/image_picker_function.dart';
+import '../utils/messages/flush_bar.dart';
+import '../widgets/custom_listtile.dart';
+import '../widgets/custom_textfield.dart';
 
 class ScreenAccountInfo extends StatefulWidget {
-  ScreenAccountInfo({super.key, required this.loggeduser});
+  const ScreenAccountInfo({super.key, required this.loggeduser});
 
-  UserModelClass loggeduser;
+  final UserModelClass loggeduser;
 
   @override
   State<ScreenAccountInfo> createState() => _ScreenAccountInfoState();
@@ -49,8 +47,9 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
     final appbarsize = AppBar().preferredSize.height;
     final devicehieght = MediaQuery.sizeOf(context).height - appbarsize;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (isPoped) async {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
               builder: (context) => ScreenMain(
@@ -59,190 +58,188 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
                   )),
           (route) => false,
         );
-        return false;
       },
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).primaryColor,
-          elevation: 0,
-          title: const Text('Account info'),
-          centerTitle: true,
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (context) => ScreenMain(
-                            loggedUser: user!,
-                            pageIndex: 2,
-                          )),
-                  (route) => false,
-                );
-              }),
-          actions: [
-            IconButton(
-              onPressed: showEditBottomSheet,
-              icon: const Icon(Icons.mode_edit, color: Colors.white),
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: SizedBox(
-            height: devicehieght,
-            child: Stack(
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      height: 160,
-                      color: Theme.of(context).primaryColor,
-                      width: double.maxFinite,
-                    ),
-                    Expanded(
-                        child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      color: Theme.of(context).colorScheme.background,
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(
-                              height: 100,
-                            ),
-                            FutureBuilder(
-                              future: DatabaseHelper.instance.getLogedProfile(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const CircularProgressIndicator();
-                                } else if (snapshot.hasError) {
-                                  return Text('Error: ${snapshot.error}');
-                                }
-                                final user = snapshot.data;
-                                return CustomListTile(
-                                    leadingIcon: Icons.person_outline,
-                                    title: user?['username'],
-                                    ontap: () {});
-                              },
-                            ),
-                            FutureBuilder(
-                              future: DatabaseHelper.instance.getLogedProfile(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const CircularProgressIndicator();
-                                } else if (snapshot.hasError) {
-                                  return Text('Error: ${snapshot.error}');
-                                }
-                                final user = snapshot.data;
-                                return CustomListTile(
-                                    leadingIcon: Icons.email_outlined,
-                                    title: user?['email'],
-                                    ontap: () {});
-                              },
-                            ),
-                            CustomListTile(
-                                leadingIcon: Icons.lock_outline_rounded,
-                                title: 'Change Password',
-                                ontap: changePasswordBottomSheet),
-                            FutureBuilder(
-                                future: DatabaseHelper.instance
-                                    .getUserTrips(widget.loggeduser.id!),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const CircularProgressIndicator();
-                                  } else if (snapshot.data == null ||
-                                      !snapshot.hasData) {
-                                    return Text('Error ${snapshot.error}');
-                                  }
-                                  return CustomListTile(
-                                    leadingIcon: Icons.map,
-                                    title: 'total Trips',
-                                    ontap: () {},
-                                    trail: snapshot.data!.length.toString(),
-                                  );
-                                }),
-                            const SizedBox(
-                              height: 120,
-                            ),
-                            Container(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                alignment: Alignment.bottomCenter,
-                                child: SvgPicture.asset(
-                                  'svg_logo/bottom-logo.svg',
-                                  height: 25,
-                                   colorFilter: ColorFilter.mode(Theme.of(context).colorScheme.primary, BlendMode.srcIn),
-                                ))
-                          ]),
-                    ))
-                  ],
-                ),
-
-                //profile photo
-                Positioned(
-                    child: Padding(
-                  padding: const EdgeInsets.only(top: 45),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 95,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        child: Stack(
-                          children: [
-                            FutureBuilder(
-                              future: DatabaseHelper.instance.getLogedProfile(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const CircularProgressIndicator();
-                                } else if (snapshot.hasError) {
-                                  return Text('Error: ${snapshot.error}');
-                                }
-                                final profile = snapshot.data;
-
-                                return CircleAvatar(
-                                  backgroundImage:
-                                      FileImage(File(profile!['imagepath'])),
-                                  radius: 80,
-                                );
-                              },
-                            ),
-                            Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Material(
-                                  elevation: 1,
-                                  shape: const CircleBorder(),
-                                  child: InkWell(
-                                    child:  CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: Colors.white,
-                                        child: Icon(Icons.edit_outlined,color: Colors.grey[700],)),
-                                    onTap: () {
-                                      openBottomSheet();
-                                      // editImage();
-                                    },
-                                  ),
-                                ))
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-              ],
-            ),
+        appBar: appBar(context),
+        body: SizedBox(
+          height: devicehieght,
+          child: Stack(
+            children: [
+              listTiles(context),
+              profilePicture(context),
+            ],
           ),
         ),
       ),
     );
   }
 
+  Positioned profilePicture(BuildContext context) {
+    return Positioned(
+        child: Padding(
+      padding: const EdgeInsets.only(top: 45),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 95,
+            backgroundColor: Theme.of(context).primaryColor,
+            child: Stack(
+              children: [
+                FutureBuilder(
+                  future: DatabaseHelper.instance.getLogedProfile(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    final profile = snapshot.data;
+
+                    return CircleAvatar(
+                      backgroundImage: FileImage(File(profile!['imagepath'])),
+                      radius: 80,
+                    );
+                  },
+                ),
+                Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Material(
+                      elevation: 1,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.grey[700],
+                            )),
+                        onTap: () => openBottomSheet(),
+                      ),
+                    ))
+              ],
+            ),
+          ),
+        ],
+      ),
+    ));
+  }
+
+  Column listTiles(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          height: 160,
+          color: Theme.of(context).primaryColor,
+          width: double.maxFinite,
+        ),
+        Expanded(
+            child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          color: Theme.of(context).colorScheme.background,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SizedBox(height: 100),
+            FutureBuilder(
+              future: DatabaseHelper.instance.getLogedProfile(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+                final user = snapshot.data;
+                return CustomListTile(
+                    leadingIcon: Icons.person_outline,
+                    title: user?['username'],
+                    ontap: () {});
+              },
+            ),
+            FutureBuilder(
+              future: DatabaseHelper.instance.getLogedProfile(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+                final user = snapshot.data;
+                return CustomListTile(
+                    leadingIcon: Icons.email_outlined,
+                    title: user?['email'],
+                    ontap: () {});
+              },
+            ),
+            CustomListTile(
+                leadingIcon: Icons.lock_outline_rounded,
+                title: 'Change Password',
+                ontap: changePasswordBottomSheet),
+            FutureBuilder(
+                future:
+                    DatabaseHelper.instance.getUserTrips(widget.loggeduser.id!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.data == null || !snapshot.hasData) {
+                    return Text('Error ${snapshot.error}');
+                  }
+                  return CustomListTile(
+                    leadingIcon: Icons.map,
+                    title: 'total Trips',
+                    ontap: () {},
+                    trail: snapshot.data!.length.toString(),
+                  );
+                }),
+            const SizedBox(height: 120),
+            Container(
+                padding: const EdgeInsets.only(bottom: 20),
+                alignment: Alignment.bottomCenter,
+                child: SvgPicture.asset(
+                  'svg_logo/triplora-logo.svg',
+                  height: 40,
+                  colorFilter: ColorFilter.mode(
+                      Theme.of(context).colorScheme.primary.withOpacity(.4),
+                      BlendMode.srcIn),
+                ))
+          ]),
+        ))
+      ],
+    );
+  }
+
+  AppBar appBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Theme.of(context).primaryColor,
+      elevation: 0,
+      title: const Text('Account info'),
+      centerTitle: true,
+      leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                  builder: (context) => ScreenMain(
+                        loggedUser: user!,
+                        pageIndex: 2,
+                      )),
+              (route) => false,
+            );
+          }),
+      actions: [
+        IconButton(
+          onPressed: showEditBottomSheet,
+          icon: const Icon(Icons.mode_edit, color: Colors.white),
+        ),
+      ],
+    );
+  }
+
 // username email edit bottom sheet//
   showEditBottomSheet() {
     return showModalBottomSheet(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       isScrollControlled: true,
       context: context,
       builder: (context) => SingleChildScrollView(
@@ -277,10 +274,7 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
                         fontWeight: FontWeight.w500),
                   ),
                 ),
-                const SizedBox(
-                  height: 30,
-                ),
-                //Custom Text Field
+                const SizedBox(height: 30),
                 CustomTextField(
                     prefix: true,
                     icon: Icons.person_outline,
@@ -315,15 +309,20 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
                   width: double.maxFinite,
                   margin: const EdgeInsets.only(bottom: 30),
                   child: ElevatedButton(
-                      style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all(
-                              Theme.of(context).colorScheme.primary)),
-                      onPressed: () {
-                        updateuserdata(
-                            username: usercontroller.text.trim(),
-                            email: emailcontroller.text.trim());
-                      },
-                      child: const Text('Save')),
+                    style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                            Theme.of(context).colorScheme.primary)),
+                    onPressed: () {
+                      updateuserdata(
+                          username: usercontroller.text.trim(),
+                          email: emailcontroller.text.trim());
+                    },
+                    child: Text(
+                      'Save',
+                      style: TextStyle(
+                          color: Theme.of(context).scaffoldBackgroundColor),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -337,6 +336,7 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
   changePasswordBottomSheet() {
     showModalBottomSheet(
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       context: context,
       builder: (context) => SingleChildScrollView(
         padding: EdgeInsets.only(
@@ -415,8 +415,14 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
                 width: double.maxFinite,
                 height: 40,
                 child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(
+                        Theme.of(context).colorScheme.primary),
+                  ),
                   onPressed: passwordUpdation,
-                  child: const Text('Save'),
+                  child: Text('Save',
+                      style: TextStyle(
+                          color: Theme.of(context).scaffoldBackgroundColor)),
                 ),
               )
             ]),
@@ -430,24 +436,21 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
   openBottomSheet() {
     showImageBottomSheet(
       context: context,
-      camara: () async {
-        getImage(isCamara: true);
-      },
-      galary: () async {
-        getImage(isCamara: false);
-      },
+      camara: () async => getImage(isCamara: true),
+      galary: () async => getImage(isCamara: false),
     );
   }
 
   // Custom Image picker Function and updating to database //
-  getImage({required bool isCamara}) async {
-    File? newImage;
-    newImage = await addImage(camera: isCamara, context: context);
-    if (newImage == null) return;
-    DatabaseHelper.instance
-        .updateUserInfo('imagepath', newImage.path, user!.id!);
-    setState(() {});
-    Navigator.of(context).pop();
+  getImage({required bool isCamara}) {
+    addImage(camera: isCamara, context: context).then((newImage) {
+      if (newImage != null) {
+        DatabaseHelper.instance
+            .updateUserInfo('imagepath', newImage.path, user!.id!);
+        setState(() {});
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   // username and email database updation //
@@ -460,7 +463,9 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
       DatabaseHelper.instance
           .updateUserInfo('email', email, widget.loggeduser.id!);
       setState(() {});
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -475,7 +480,7 @@ class _ScreenAccountInfoState extends State<ScreenAccountInfo> {
       oldPassController.text = '';
       user?.password = newPassController.text;
       Navigator.of(context).pop();
-  
+
       customToast(bgcolor: Colors.green, msg: 'Password updated successfully');
     }
   }

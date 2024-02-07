@@ -2,11 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
+import 'package:wanderlust_new/widgets/custom_button.dart';
 
+import '../widgets/custom_textfield.dart';
 import 'parent_screen.dart';
 import 'signup_screen.dart';
-import 'widgets/custom_textfield.dart';
 
 class ScreenLogin extends StatefulWidget {
   const ScreenLogin({super.key});
@@ -111,18 +112,14 @@ class _ScreenLoginState extends State<ScreenLogin> {
                             return null;
                           },
                         ),
-                        const SizedBox(
-                          height: 20,
-                        ),
+                        const SizedBox(height: 20),
                         //Submit button
 
                         SizedBox(
                           width: double.infinity,
                           height: 48,
-                          child: ElevatedButton(
-                            onPressed: signinValidation,
-                            child: const Text('Sign in'),
-                          ),
+                          child: CustomButton(
+                              onPressed: signinValidation, label: 'Sign In'),
                         ),
                         const SizedBox(height: 25),
                         InkWell(
@@ -155,8 +152,15 @@ class _ScreenLoginState extends State<ScreenLogin> {
                         ),
                         Center(
                           child: SvgPicture.asset(
-                            'svg_logo/bottom-logo.svg',
-                            height: 22,
+                            'svg_logo/triplora-logo.svg',
+                            height: 40,
+                            colorFilter: ColorFilter.mode(
+                              Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(.4),
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                       ],
@@ -193,9 +197,7 @@ class _ScreenLoginState extends State<ScreenLogin> {
       if (await DatabaseHelper.instance.validating(username, password)) {
         final user = await DatabaseHelper.instance.authentication(username);
         Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (context) => ScreenMain(
-                  loggedUser: user,
-                )));
+            builder: (context) => ScreenMain(loggedUser: user)));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

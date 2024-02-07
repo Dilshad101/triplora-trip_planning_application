@@ -4,12 +4,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:wanderlust_new/Database/database_helper.dart';
-import 'package:wanderlust_new/Screens/subscreen_trip_details/sub_screen_image_details.dart';
+import 'package:wanderlust_new/database/database_helper.dart';
+import 'package:wanderlust_new/screens/subscreen_trip_details/sub_screen_image_details.dart';
 
-import '../../Database/database_models.dart';
-import '../../Functionality/camara_bottomsheet.dart';
-import '../../Functionality/image_picker_function.dart';
+import '../../models/trip_model.dart';
+import '../../utils/functions/camara_bottomsheet.dart';
+import '../../utils/functions/image_picker_function.dart';
 import 'note_editing_screen.dart';
 
 class SubScreenMedia extends StatefulWidget {
@@ -22,7 +22,6 @@ class SubScreenMedia extends StatefulWidget {
 
 class _SubScreenMediaState extends State<SubScreenMedia> {
   TextEditingController noteController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -31,139 +30,149 @@ class _SubScreenMediaState extends State<SubScreenMedia> {
     });
   }
 
-  Future<String?> getTripnote() async {
-    final temptrip = await DatabaseHelper.instance.getATrip(widget.trip.id!);
-
-    return temptrip.notes;
-  }
-
-  File? images;
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: ListView(
-        physics: const BouncingScrollPhysics(),
-        shrinkWrap: true,
-        children: [
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text('Images',
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: Theme.of(context).colorScheme.onTertiary)),
-              const Expanded(child: SizedBox()),
-              InkWell(
-                  onTap: () {
-                    showImageBottomSheet(
-                      context: context,
-                      camara: () {
-                        addTripImage(camara: true);
-                      },
-                      galary: () {
-                        addTripImage(camara: false);
-                      },
-                    );
-                  },
-                  child: Icon(Icons.add_photo_alternate,
-                      size: 25,
-                      color: Theme.of(context).colorScheme.onTertiary))
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-              constraints: const BoxConstraints(minHeight: 100),
-              child: FutureBuilder(
-                future: DatabaseHelper.instance.getallImages(widget.trip.id!),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else if (snapshot.data == null || snapshot.data!.isEmpty) {
-                    return const Center(
-                        child: Text(
-                      'No images available. add a new image',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ));
-                  }
-                  return GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    itemCount: snapshot.data!.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3),
-                    itemBuilder: (context, index) {
-                      final image = snapshot.data![index];
-                      return GestureDetector(
-                        child: Container(
-                          margin: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                              image: DecorationImage(
-                                  image: FileImage(File(image['images'])),
-                                  fit: BoxFit.cover),
-                              color: Colors.grey,
-                              borderRadius: BorderRadius.circular(5)),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (context) => ScreenImageView(
-                                    imagepath: image['images'],
-                                    id: image['id'],
-                                  )));
-                        },
-                      );
-                    },
-                  );
-                },
-              )),
-          const SizedBox(height: 30),
-          Row(
-            children: [
-              Text(
-                'Notes',
-                style: TextStyle(
-                    fontSize: 18,
-                    color: Theme.of(context).colorScheme.onTertiary),
+      physics: const BouncingScrollPhysics(),
+      shrinkWrap: true,
+      children: [
+        const SizedBox(height: 10),
+        addImageButton(context),
+        const SizedBox(height: 10),
+        imageBuilder(),
+        const SizedBox(height: 30),
+        addNoteButton(context),
+        const SizedBox(height: 15),
+        noteViewer(context),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Container noteViewer(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSecondaryContainer,
+          borderRadius: BorderRadius.circular(5)),
+      child: TextFormField(
+        style: const TextStyle(color: Colors.grey),
+        readOnly: true,
+        maxLines: 10,
+        textAlign: TextAlign.justify,
+        controller: noteController,
+        decoration: const InputDecoration(
+            hintText: 'note is empty', border: InputBorder.none),
+      ),
+    );
+  }
+
+  Row addNoteButton(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          'Notes',
+          style: TextStyle(
+              fontSize: 18, color: Theme.of(context).colorScheme.onTertiary),
+        ),
+        const Expanded(child: SizedBox()),
+        InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => NoteEditingPad(
+                trip: widget.trip,
+                controller: noteController,
               ),
-              const Expanded(child: SizedBox()),
-              InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => NoteEditingPad(
-                              trip: widget.trip,
-                              controller: noteController,
-                            )));
-                  },
-                  child: Icon(Icons.edit_note_outlined,
-                      size: 28,
-                      color: Theme.of(context).colorScheme.onTertiary)),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Container(
-            constraints: const BoxConstraints(minHeight: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
-                borderRadius: BorderRadius.circular(5)),
-            child: TextFormField(
-              style:const TextStyle(color: Colors.grey),
-              readOnly: true,
-              maxLines: 10,
-              textAlign: TextAlign.justify,
-              controller: noteController,
-              decoration: const InputDecoration(
-                
-                  hintText: 'note is empty', border: InputBorder.none),
-              
             ),
           ),
-          const SizedBox(height: 20),
-        ],
-      ),
+          child: Icon(
+            Icons.edit_note_outlined,
+            size: 28,
+            color: Theme.of(context).colorScheme.onTertiary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Container imageBuilder() {
+    return Container(
+        constraints: const BoxConstraints(minHeight: 100),
+        child: FutureBuilder(
+          future: DatabaseHelper.instance.getallImages(widget.trip.id!),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            } else if (snapshot.data == null || snapshot.data!.isEmpty) {
+              return const Center(
+                  child: Text(
+                'No images available. add a new image',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ));
+            }
+            return GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: snapshot.data!.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3),
+              itemBuilder: (context, index) {
+                final image = snapshot.data![index];
+                return GestureDetector(
+                  child: Container(
+                    margin: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                        image: DecorationImage(
+                            image: FileImage(File(image['images'])),
+                            fit: BoxFit.cover),
+                        color: Colors.grey,
+                        borderRadius: BorderRadius.circular(5)),
+                  ),
+                  onTap: () {
+                    Navigator.of(context)
+                        .push(
+                      MaterialPageRoute(
+                          builder: (context) => ScreenImageView(
+                                imagepath: image['images'],
+                                id: image['id'],
+                              )),
+                    )
+                        .then((value) {
+                      if (value != null) {
+                        setState(() {});
+                      }
+                    });
+                  },
+                );
+              },
+            );
+          },
+        ));
+  }
+
+  Row addImageButton(BuildContext context) {
+    return Row(
+      children: [
+        Text('Images',
+            style: TextStyle(
+                fontSize: 18, color: Theme.of(context).colorScheme.onTertiary)),
+        const Expanded(child: SizedBox()),
+        InkWell(
+            onTap: () => showImageBottomSheet(
+                  context: context,
+                  camara: () => addTripImage(camara: true),
+                  galary: () => addTripImage(camara: false),
+                ),
+            child: Icon(
+              Icons.add_photo_alternate,
+              size: 25,
+              color: Theme.of(context).colorScheme.onTertiary,
+            ))
+      ],
     );
   }
 
@@ -183,5 +192,11 @@ class _SubScreenMediaState extends State<SubScreenMedia> {
     }
     setState(() {});
     Navigator.of(context).pop();
+  }
+
+  Future<String?> getTripnote() async {
+    final temptrip = await DatabaseHelper.instance.getATrip(widget.trip.id!);
+
+    return temptrip.notes;
   }
 }

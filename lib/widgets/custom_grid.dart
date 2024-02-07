@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../style.dart';
+import '../utils/styles/style.dart';
+
 
 Container customGrid(
     {required String text,

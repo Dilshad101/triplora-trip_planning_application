@@ -5,13 +5,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:wanderlust_new/Functionality/camara_bottomsheet.dart';
+import 'package:wanderlust_new/widgets/custom_button.dart';
 
-import '../Database/database_helper.dart';
-import '../Database/database_models.dart';
+import '../database/database_helper.dart';
+import '../models/user_model.dart';
+import '../utils/functions/camara_bottomsheet.dart';
+import '../widgets/custom_textfield.dart';
 import 'parent_screen.dart';
 import 'signin_screen.dart';
-import 'widgets/custom_textfield.dart';
 
 class ScreenSignup extends StatefulWidget {
   const ScreenSignup({super.key});
@@ -60,12 +61,17 @@ class _ScreenSigninState extends State<ScreenSignup> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             SvgPicture.asset(
-                              'svg_logo/bottom-logo.svg',
-                              height: 30,
+                              'svg_logo/triplora-logo.svg',
+                              height: 40,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(.4),
+                                BlendMode.srcIn,
+                              ),
                             ),
-                            const SizedBox(
-                              height: 10,
-                            )
+                            const SizedBox(height: 10)
                           ],
                         ),
                       ),
@@ -241,25 +247,30 @@ class _ScreenSigninState extends State<ScreenSignup> {
                                             const Size(double.maxFinite, 48))),
                                     onPressed:
                                         showImagePickerBottomSheet, //addimage,
-                                    child: const Text('Upload Profile photo',
-                                        style: TextStyle(fontSize: 16)),
+                                    child: Text('Upload Profile photo',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            color: Theme.of(context)
+                                                .scaffoldBackgroundColor)),
                                   ),
                                   const SizedBox(height: 15),
 
                                   //Signup button
-
-                                  ElevatedButton(
-                                    style: ButtonStyle(
-                                        backgroundColor:
-                                            MaterialStateProperty.all(
-                                                Theme.of(context).primaryColor),
-                                        fixedSize: MaterialStateProperty.all(
-                                            const Size(double.maxFinite, 48))),
-                                    onPressed: adduserprofile,
-                                    child: const Text('Sign up',
-                                        style: TextStyle(
-                                            fontSize: 16, color: Colors.white)),
-                                  ),
+                                  CustomButton(
+                                      onPressed: adduserprofile,
+                                      label: 'Sign up'),
+                                  // ElevatedButton(
+                                  //   style: ButtonStyle(
+                                  //       backgroundColor:
+                                  //           MaterialStateProperty.all(
+                                  //               Theme.of(context).primaryColor),
+                                  //       fixedSize: MaterialStateProperty.all(
+                                  //           const Size(double.maxFinite, 48))),
+                                  //   onPressed: adduserprofile,
+                                  //   child: const Text('Sign up',
+                                  //       style: TextStyle(
+                                  //           fontSize: 16, color: Colors.white)),
+                                  // ),
 
                                   // signin text
 
@@ -397,28 +408,7 @@ class _ScreenSigninState extends State<ScreenSignup> {
 
 //Email validation
 bool isEmailValid(String email) {
-  // Regular expression pattern for email validation
   String pattern = r'^[\w-]+(\.[\w-]+)*@([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$';
   RegExp regExp = RegExp(pattern);
   return regExp.hasMatch(email);
 }
-
-// //Password validation
-// bool isvalidatePassword(String password) {
-//   // Password must be at least 8 characters long
-//   if (password.length < 8) {
-//     return false;
-//   }
-
-//   // Password must contain at least one lowercase letter
-//   if (!password.contains(RegExp(r'[a-z]'))) {
-//     return false;
-//   }
-
-//   // Password must contain at least one digit
-//   if (!password.contains(RegExp(r'[0-9]'))) {
-//     return false;
-//   }
-
-//   return true;
-// }
